@@ -38,7 +38,7 @@
 
   <!-- cohort dwell caption -->
   <div ref="{{ cohortRef }}" style="position:absolute;top:7.5%;left:0;right:0;text-align:center;opacity:0;will-change:opacity">
-    <div style="font:11px ui-monospace,monospace;letter-spacing:.3em;color:#cdcfe4">THE COHORT · 15 STUDENTS</div>
+    <div style="font:11px ui-monospace,monospace;letter-spacing:.3em;color:#cdcfe4">THE COHORT · {{ cohortCount }} STUDENTS</div>
     <div style="margin-top:7px;font:10px ui-monospace,monospace;letter-spacing:.2em;color:#8d90ab">each thread a student — scroll to travel their works</div>
   </div>
 
@@ -229,83 +229,29 @@ class Component extends DCLogic {
     this._generate(this._roster || Component.DEFAULT_ROSTER);
   }
 
-  // Full (re)generation of the whole point cloud for a given roster of names. Called once at mount with
-  // the default roster, and again — from scratch — whenever data/students.json hands us a changed one.
+  // Sets up the roster + the empty timeline scaffolding for a given set of names. Called once at mount
+  // with the roster and again whenever data/students.csv changes. It intentionally creates NO points and
+  // NO comments — the cloud is populated ONLY by real rows from submissions.csv (see loadSubmissions).
   _generate(NAMES){
     this.students = NAMES.map((name, i) => ({ name, h: Math.round((i * 360) / Math.max(1,NAMES.length)) }));
-    const KINDS = ['note','sketch','reference','question','project','reply','field note'];
-    const TYPES = ['text','image','video','audio'];
-    const SUB = [
-      'The proposal treats the weekly repair meet-up not as an event but as infrastructure: it returns, it accrues memory, and the people who show up begin to hold the conditions themselves rather than waiting for an organiser.',
-      'A shared ledger of who-knows-what across the neighbourhood — not an app first, but a ritual of naming and being named, so the knowledge compounds where it is made instead of leaking out to whoever documents it.',
-      'It begins from a tea stall that already convenes the street. The intervention only extends its hosting capacity — a few chairs, a slow board, a place to leave things — and lets the practice keep returning on its own terms.'
-    ];
-    const CMT = [
-      'Whose labour keeps this going once the funding stops?',
-      'This reads as infrastructure, not a one-off workshop — good.',
-      'Careful — is this noticing what exists, or importing it?',
-      'Who gets to return to this, and who is left out?',
-      'Feels closer to extraction than return right now.',
-      'The real condition here is trust, not the tool.',
-      'Could it compound if the original organiser stepped back?',
-      'The map shows relationships; I mostly see isolated nodes.',
-      'Strong, but it flattens the messy middle of the site.',
-      'What is the smallest version of this that still returns?'
-    ];
 
+    // week-grid / timeline scaffolding — kept so real submissions know where to sit in space + time.
     const WEEKS = 18;
     const wc = [];
     for (let w = 1; w <= WEEKS; w++) wc.push({ x: (this.rnd(w*7+3)-0.5)*460, y: (this.rnd(w*7+11)-0.5)*360 });
-    const base = new Date(2026, 6, 6);
-    const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const fdate = (w, off) => { const d = new Date(base.getTime() + ((w-1)*7+off)*86400000); return ('0'+d.getDate()).slice(-2)+' '+MON[d.getMonth()]; };
+    this.semBase = new Date(2026, 6, 6);
+    this.WEEKS = WEEKS; this.wc = wc;
+    this._MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-    const pts = []; let c = 0;
-    for (let w = 1; w <= WEEKS; w++){
-      const count = 3 + Math.round(w*0.6);
-      const zBase = -(w-1)*160;
-      for (let k = 0; k < count; k++){
-        const s = c*3+5, student = c % 15;
-        pts.push({ id: c, student, week: w,
-          x: wc[w-1].x + (this.rnd(s)-0.5)*300,
-          y: wc[w-1].y + (this.rnd(s+1)-0.5)*300,
-          z: zBase + (this.rnd(s+2)-0.5)*110,
-          baseR: 3.4 + this.rnd(s+5)*2.2,
-          phase: this.rnd(s+6)*6.28, spd: 0.6 + this.rnd(s+7)*0.9,
-          kind: KINDS[c % KINDS.length],
-          subType: TYPES[Math.floor(this.rnd(s+8)*4)],
-          subText: SUB[c % SUB.length],
-          dateStr: fdate(w, Math.floor(this.rnd(s+9)*4)),
-          time: String(8+Math.floor(this.rnd(s+3)*10)).padStart(2,'0')+':'+String(Math.floor(this.rnd(s+4)*60)).padStart(2,'0'),
-          name: this.students[student].name,
-          vis:false, sx:0, sy:0, rad:0, relZ:1, depthA:0 });
-        c++;
-      }
-    }
-    this.pts = pts;
-    this.routes = this.students.map((_, si) => pts.filter(p => p.student===si).sort((a,b)=>a.week-b.week).map(p=>p.id));
-    this.routeIdx = {}; this.routes.forEach(r => r.forEach((id,i)=> this.routeIdx[id]=i));
-    this.semBase = base; this.WEEKS = WEEKS; this.wc = wc; this._MON = MON;
-
-    this.comments = []; let cid = 0;
-    for (const p of pts){
-      const nc = this.rnd(p.id*5+99);
-      const n = nc<0.55 ? 0 : nc<0.8 ? 1 : nc<0.93 ? 2 : 3;
-      for (let j = 0; j < n; j++){
-        const a1 = this.rnd(p.id*9+j*3+1)*6.28, a2 = (this.rnd(p.id*9+j*3+2)-0.5)*3.0;
-        const dist = 32 + this.rnd(p.id*9+j*3+3)*28;
-        const rc2 = this.rnd(cid*7+3); const nr = rc2<0.5?0:rc2<0.78?1:rc2<0.92?2:3;
-        const replies = [];
-        for (let q = 0; q < nr; q++) replies.push({ author: NAMES[Math.floor(this.rnd(cid*13+q*5+2)*15)], text: CMT[(cid+q*3+4)%CMT.length] });
-        this.comments.push({ id: cid, parent: p.id,
-          x: p.x + Math.cos(a1)*Math.cos(a2)*dist, y: p.y + Math.sin(a2)*dist, z: p.z + Math.sin(a1)*Math.cos(a2)*dist,
-          baseR: 1.5 + this.rnd(cid+7)*0.9, phase: this.rnd(cid+3)*6.28, spd: 0.6 + this.rnd(cid+5)*0.9,
-          author: NAMES[Math.floor(this.rnd(cid+13)*15)], text: CMT[cid % CMT.length], replies,
-          vis:false, sx:0, sy:0, crad:0 });
-        cid++;
-      }
-    }
+    // empty cloud — no fabricated points or critique. Real work arrives via loadSubmissions();
+    // real, visitor-typed discourse lives in this.extra (postComment / postReply).
+    this.pts = [];
+    this.routes = this.students.map(() => []);
+    this.routeIdx = {};
+    this.comments = [];
     this.extra = {};
+    this._subSeen = new Set();
+    this._subCsvText = null;
   }
 
   // Roster pipeline: reads data/students.csv (one "Name" per row) at load. Add, remove, or rename a
@@ -334,48 +280,61 @@ class Component extends DCLogic {
 
   clusterFor(w){ if (this.wc[w-1]) return this.wc[w-1]; return { x: (this.rnd(w*7+3)-0.5)*460, y: (this.rnd(w*7+11)-0.5)*360 }; }
 
-  // Publishing pipeline: reads data/submissions.csv at load. Add a row there (student name from the
-  // roster, a date, optional image path + text) and — on next load — it merges in as a real point,
-  // slotted into that student's thread at the right week, and briefly pulses so it reads as freshly arrived.
+  // Publishing pipeline: reads data/submissions.csv and rebuilds the cloud as a direct mirror of it —
+  // every dot is a real row, adds/edits/removals all reflected. Points sit on the week grid by date and
+  // in their student's colour thread. Rows appearing during a live session briefly pulse as "just arrived".
   async loadSubmissions(){
-    let rows;
+    let text;
     try {
       const res = await fetch('data/submissions.csv', { cache: 'no-store' });
       if (!res.ok) return;
-      rows = this.parseCSV(await res.text());
+      text = await res.text();
     } catch (e) { return; }
-    const data = this.csvToObjects(rows).map(o => ({
+    if (text === this._subCsvText) return; // unchanged — leave the cloud (and any interaction) untouched
+    const firstLoad = this._subCsvText === null;
+    this._subCsvText = text;
+    const data = this.csvToObjects(this.parseCSV(text)).map(o => ({
       id: o.id, student: o.student, date: o.date, time: o.time, kind: o.kind, type: o.type, image: o.image, text: o.text
     }));
-    if (!data.length) return;
-    let addedAny = false;
+
+    const prevSeen = this._subSeen || new Set();
+    const seen = new Set();
+    const pts = [];
     for (const raw of data){
       if (!raw || !raw.student || !raw.date) continue;
       const key = raw.id || (raw.student+'|'+raw.date+'|'+(raw.time||''));
-      if (this._subSeen.has(key)) continue;
+      if (seen.has(key)) continue; // ignore duplicate rows within the file
       const si = this.students.findIndex(s => s.name.toLowerCase() === String(raw.student).trim().toLowerCase());
-      if (si < 0) continue;
+      if (si < 0) continue; // student not in the roster — skip rather than invent one
       const d = new Date(raw.date+'T'+(raw.time||'12:00')+':00');
-      if (isNaN(d.getTime())) continue;
+      if (isNaN(d.getTime())) continue; // unparseable date — skip
       const week = Math.max(1, Math.floor((d - this.semBase)/(7*86400000)) + 1);
       const cl = this.clusterFor(week);
-      const id = this.pts.length, s = id*3+5;
-      this._subSeen.add(key);
-      this.pts.push({ id, student: si, week,
+      const id = pts.length, s = id*3+5;
+      seen.add(key);
+      pts.push({ id, student: si, week,
         x: cl.x + (this.rnd(s)-0.5)*300, y: cl.y + (this.rnd(s+1)-0.5)*300, z: -(week-1)*160 + (this.rnd(s+2)-0.5)*110,
         baseR: 4.4, phase: this.rnd(s+6)*6.28, spd: 0.6+this.rnd(s+7)*0.9,
         kind: raw.kind || 'submission', subType: raw.type || (raw.image ? 'image' : 'text'),
         subText: raw.text || '', image: raw.image || null,
         dateStr: ('0'+d.getDate()).slice(-2)+' '+this._MON[d.getMonth()], time: raw.time || '12:00',
-        name: this.students[si].name, real: true, justArrived: performance.now(),
+        name: this.students[si].name, real: true,
+        justArrived: (!firstLoad && !prevSeen.has(key)) ? performance.now() : null,
         vis:false, sx:0, sy:0, rad:0, relZ:1, depthA:0 });
-      this.routes[si].push(id); this.routes[si].sort((a,b)=>this.pts[a].week-this.pts[b].week);
-      addedAny = true;
     }
-    if (addedAny){
-      this.routeIdx = {}; this.routes.forEach(r => r.forEach((pid,i)=> this.routeIdx[pid]=i));
-      this.forceUpdate();
+    this._subSeen = seen;
+    this.pts = pts;
+    this.routes = this.students.map((_, si) => pts.filter(p => p.student===si).sort((a,b)=>a.week-b.week).map(p=>p.id));
+    this.routeIdx = {}; this.routes.forEach(r => r.forEach((pid,i)=> this.routeIdx[pid]=i));
+    // a rebuild reassigns point ids — clear any interaction pointing at a now-stale index
+    if (!firstLoad){
+      this.focus = null; this.expanded = false; this.selectedStudent = null;
+      this.hoverId = null; this.hoverComment = null; this.previewIdx = null; this.travel = null;
+      this.extra = {};
+      if (this.previewRef && this.previewRef.current) this.previewRef.current.style.display = 'none';
+      this.setState({ focus: null, expanded: false });
     }
+    this.forceUpdate();
   }
 
   componentDidMount(){
@@ -753,7 +712,7 @@ class Component extends DCLogic {
     this.build();
     const f = this.state.focus;
     const uName = this.state.userName;
-    let v = { wrapRef:this.wrapRef, canvasRef:this.canvasRef, phRef:this.phRef, phCapRef:this.phCapRef, landingRef:this.landingRef, previewRef:this.previewRef, previewAuthorRef:this.previewAuthorRef, previewTextRef:this.previewTextRef, expandInputRef:this.expandInputRef, replyInputRef:this.replyInputRef, firstRef:this.firstRef, lastRef:this.lastRef, replyFirstRef:this.replyFirstRef, replyLastRef:this.replyLastRef, nextArrowRef:this.nextArrowRef, prevArrowRef:this.prevArrowRef, titleRef:this.titleRef, subRef:this.subRef, subInnerRef:this.subInnerRef, cohortRef:this.cohortRef, expand:this.expand, closeExpand:this.closeExpand, exitFocus:this.exitFocus, postComment:this.postComment, postReply:this.postReply, goNext:this.goNext, goPrev:this.goPrev, submitName:this.submitName, submitReplyName:this.submitReplyName, showCard: f!=null && !this.state.expanded, expanded: this.state.expanded, hasName: !!uName, needName: !uName, userName: uName, postingAs: uName ? ('posting as ' + uName) : '' };
+    let v = { wrapRef:this.wrapRef, canvasRef:this.canvasRef, phRef:this.phRef, phCapRef:this.phCapRef, cohortCount: (this.students ? this.students.length : 0), landingRef:this.landingRef, previewRef:this.previewRef, previewAuthorRef:this.previewAuthorRef, previewTextRef:this.previewTextRef, expandInputRef:this.expandInputRef, replyInputRef:this.replyInputRef, firstRef:this.firstRef, lastRef:this.lastRef, replyFirstRef:this.replyFirstRef, replyLastRef:this.replyLastRef, nextArrowRef:this.nextArrowRef, prevArrowRef:this.prevArrowRef, titleRef:this.titleRef, subRef:this.subRef, subInnerRef:this.subInnerRef, cohortRef:this.cohortRef, expand:this.expand, closeExpand:this.closeExpand, exitFocus:this.exitFocus, postComment:this.postComment, postReply:this.postReply, goNext:this.goNext, goPrev:this.goPrev, submitName:this.submitName, submitReplyName:this.submitReplyName, showCard: f!=null && !this.state.expanded, expanded: this.state.expanded, hasName: !!uName, needName: !uName, userName: uName, postingAs: uName ? ('posting as ' + uName) : '' };
     if (f != null){
       const p = this.pts[f];
       const list = (this.extra[f]||[]).concat(this.comments.filter(c => c.parent===f));
