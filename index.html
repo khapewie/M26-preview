@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#f3f1ea;font-family:ui-sans-serif,system-ui,sans-serif}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+</helmet>
+
+<div ref="{{ wrapRef }}" style="position:fixed;inset:0;background:#f3f1ea;cursor:default;touch-action:none">
+  <canvas ref="{{ canvasRef }}" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>
+</div>
+
+<!-- overlay chrome (pointer-none except interactive cards) -->
+<div style="position:fixed;inset:0;pointer-events:none;z-index:20">
+
+  <!-- hover placeholder (fragment) -->
+  <div ref="{{ phRef }}" style="position:absolute;top:0;left:0;display:none;will-change:transform">
+    <div style="width:48px;height:34px;background:rgba(14,14,22,.85);background-image:linear-gradient(to top right,transparent calc(50% - .6px),rgba(220,222,240,.55) calc(50% - .6px),rgba(220,222,240,.55) calc(50% + .6px),transparent calc(50% + .6px)),linear-gradient(to bottom right,transparent calc(50% - .6px),rgba(220,222,240,.55) calc(50% - .6px),rgba(220,222,240,.55) calc(50% + .6px),transparent calc(50% + .6px));border:1px solid rgba(200,205,235,.5);margin:0 auto"></div>
+    <div ref="{{ phCapRef }}" style="margin-top:6px;white-space:nowrap;font:10px/1.3 ui-monospace,monospace;color:#d6d8ea;background:rgba(10,10,18,.78);border:1px solid rgba(120,125,160,.3);padding:3px 7px;text-align:center;backdrop-filter:blur(4px)"></div>
+  </div>
+
+  <!-- comment preview bubble -->
+  <div ref="{{ previewRef }}" style="position:absolute;top:0;left:0;display:none;max-width:248px;will-change:transform">
+    <div style="background:rgba(10,10,16,.85);border:1px solid rgba(120,125,160,.32);padding:9px 12px;backdrop-filter:blur(5px)">
+      <div ref="{{ previewAuthorRef }}" style="font:600 10px ui-monospace,monospace;letter-spacing:.1em;color:#bfc2da"></div>
+      <div ref="{{ previewTextRef }}" style="font:12px/1.45 ui-sans-serif;color:#e6e7f0;margin-top:4px"></div>
+    </div>
+  </div>
+
+  <!-- cohort dwell caption -->
+  <div ref="{{ cohortRef }}" style="position:absolute;top:7.5%;left:0;right:0;text-align:center;opacity:0;will-change:opacity">
+    <div style="font:11px ui-monospace,monospace;letter-spacing:.3em;color:#cdcfe4">THE COHORT · 15 STUDENTS</div>
+    <div style="margin-top:7px;font:10px ui-monospace,monospace;letter-spacing:.2em;color:#8d90ab">each thread a student — scroll to travel their works</div>
+  </div>
+
+  <!-- landing chrome -->
+  <div ref="{{ landingRef }}" style="position:absolute;inset:0;color:#171512">
+    <div style="position:absolute;top:9%;left:0;right:0;text-align:center">
+      <div ref="{{ titleRef }}" style="display:inline-block;font-family:'Spectral',Georgia,serif;font-weight:300;font-size:48px;letter-spacing:.004em;color:#1d1b17;white-space:nowrap">Imagination Infrastructure</div>
+      <div ref="{{ subRef }}" style="display:block;margin-top:15px;font:11px ui-monospace,monospace;letter-spacing:.26em;color:#6c685f"><span ref="{{ subInnerRef }}" style="display:inline-block">M26 STUDIO · CEPT · 2026</span></div>
+    </div>
+    <div style="position:absolute;bottom:38px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:9px">
+      <svg width="22" height="40" viewBox="0 0 22 40" fill="none" stroke="#171512" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><line x1="11" y1="2" x2="11" y2="30"></line><polyline points="3.5,21 11,31 18.5,21"></polyline></svg>
+      <div style="font:11px ui-monospace,monospace;letter-spacing:.24em;color:#171512">SCROLL</div>
+    </div>
+  </div>
+
+  <!-- focus info card -->
+  <sc-if value="{{ showCard }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:42px;top:50%;transform:translateY(-50%);width:248px;pointer-events:auto;background:rgba(8,8,14,.62);backdrop-filter:blur(8px);border:1px solid rgba(120,125,160,.26);padding:22px;color:#ece9e2">
+      <div style="width:160px;height:108px;background-color:rgba(255,255,255,.04);background-image:linear-gradient(to top right,transparent calc(50% - .7px),rgba(220,222,240,.5) calc(50% - .7px),rgba(220,222,240,.5) calc(50% + .7px),transparent calc(50% + .7px)),linear-gradient(to bottom right,transparent calc(50% - .7px),rgba(220,222,240,.5) calc(50% - .7px),rgba(220,222,240,.5) calc(50% + .7px),transparent calc(50% + .7px));border:1px solid rgba(200,205,235,.4)"></div>
+      <div style="margin-top:16px;font:600 19px ui-sans-serif">{{ focusName }}</div>
+      <div style="margin-top:7px;font:10px ui-monospace,monospace;letter-spacing:.14em;color:#9a958c">{{ focusKind }} · {{ focusDate }}</div>
+      <div style="margin-top:3px;font:10px ui-monospace,monospace;letter-spacing:.14em;color:#9a958c">{{ focusType }} submission</div>
+      <div style="display:flex;gap:9px;margin-top:20px">
+        <div onClick="{{ expand }}" style="cursor:pointer;font:11px ui-monospace,monospace;letter-spacing:.1em;padding:10px 16px;background:#ece9e2;color:#0a0a10">EXPAND ↗</div>
+        <div onClick="{{ exitFocus }}" style="cursor:pointer;font:11px ui-monospace,monospace;padding:10px 13px;border:1px solid rgba(236,233,226,.5)">✕</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- expanded submission box -->
+  <sc-if value="{{ expanded }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:4% 5%;background:#f6f4ee;border:1px solid #1d1b17;box-shadow:0 30px 90px rgba(0,0,0,.45);pointer-events:auto;display:flex;flex-direction:column;color:#1d1b17">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:22px 30px;border-bottom:1px solid rgba(29,27,23,.16)">
+        <div>
+          <div style="font:600 22px ui-sans-serif">{{ focusName }}</div>
+          <div style="font:11px ui-monospace,monospace;letter-spacing:.14em;color:#6c685f;margin-top:6px">{{ focusKind }} · {{ focusType }} · {{ focusDate }}</div>
+        </div>
+        <div onClick="{{ closeExpand }}" style="cursor:pointer;font:17px ui-monospace,monospace;color:#6c685f;padding:2px 4px">✕</div>
+      </div>
+      <div style="flex:1;overflow:auto;padding:28px 30px;display:flex;gap:32px">
+        <div style="flex:1.5;min-width:0">
+          <sc-if value="{{ hasRealImage }}" hint-placeholder-val="{{ false }}">
+            <div style="width:100%;height:300px;background-image:url('{{ focusImage }}');background-size:cover;background-position:center;border:1px solid #c4c1b7"></div>
+          </sc-if>
+          <sc-if value="{{ isPlaceholderMedia }}" hint-placeholder-val="{{ false }}">
+            <div style="height:300px;background-color:#ecebe3;background-image:linear-gradient(to top right,transparent calc(50% - .8px),#c4c1b7 calc(50% - .8px),#c4c1b7 calc(50% + .8px),transparent calc(50% + .8px)),linear-gradient(to bottom right,transparent calc(50% - .8px),#c4c1b7 calc(50% - .8px),#c4c1b7 calc(50% + .8px),transparent calc(50% + .8px));border:1px solid #c4c1b7;display:flex;align-items:flex-end;padding:14px">
+              <span style="font:10px ui-monospace,monospace;letter-spacing:.14em;color:#8a8678">{{ focusTypeLabel }}</span>
+            </div>
+          </sc-if>
+          <div style="font:15px/1.75 ui-sans-serif;margin-top:20px;max-width:62ch">{{ focusText }}</div>
+        </div>
+        <div style="flex:1;min-width:240px;border-left:1px solid rgba(29,27,23,.14);padding-left:26px;display:flex;flex-direction:column">
+          <div style="font:10px ui-monospace,monospace;letter-spacing:.18em;color:#6c685f;margin-bottom:16px">DISCOURSE · {{ focusCommentCount }}</div>
+          <div style="flex:1;overflow:auto;display:flex;flex-direction:column;gap:18px">
+            <sc-for list="{{ focusComments }}" as="cm" hint-placeholder-count="3">
+              <div>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+                  <div style="flex:1;min-width:0">
+                    <div style="font:600 12px ui-sans-serif">{{ cm.author }}</div>
+                    <div style="font:13px/1.55 ui-sans-serif;color:#3a372f;margin-top:3px">{{ cm.text }}</div>
+                  </div>
+                  <div onClick="{{ cm.toggle }}" title="continue discourse" style="flex:none;cursor:pointer;width:26px;height:26px;border-radius:50%;border:1px solid {{ cm.ringColor }};background:{{ cm.ringBg }};color:{{ cm.ringText }};display:flex;align-items:center;justify-content:center;font:10px ui-monospace,monospace">{{ cm.count }}</div>
+                </div>
+                <sc-if value="{{ cm.open }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:12px;margin-left:12px;border-left:1px solid rgba(29,27,23,.16);padding-left:14px;display:flex;flex-direction:column;gap:12px">
+                    <sc-for list="{{ cm.replies }}" as="rp" hint-placeholder-count="2">
+                      <div><div style="font:600 11px ui-sans-serif">{{ rp.author }}</div><div style="font:12.5px/1.5 ui-sans-serif;color:#4a473f;margin-top:2px">{{ rp.text }}</div></div>
+                    </sc-for>
+                    <sc-if value="{{ needName }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;gap:6px">
+                        <input ref="{{ replyFirstRef }}" placeholder="First name" style="flex:1;min-width:0;font:12px ui-sans-serif;padding:8px 10px;border:1px solid rgba(29,27,23,.28);background:#fff;color:#1d1b17;outline:none" />
+                        <input ref="{{ replyLastRef }}" placeholder="Last name" style="flex:1;min-width:0;font:12px ui-sans-serif;padding:8px 10px;border:1px solid rgba(29,27,23,.28);background:#fff;color:#1d1b17;outline:none" />
+                        <div onClick="{{ submitReplyName }}" title="save name" style="cursor:pointer;font:12px ui-monospace,monospace;padding:8px 12px;background:#1d1b17;color:#f6f4ee;display:flex;align-items:center">→</div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ hasName }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;gap:7px">
+                        <input ref="{{ replyInputRef }}" placeholder="reply as {{ userName }}…" style="flex:1;font:12px ui-sans-serif;padding:8px 10px;border:1px solid rgba(29,27,23,.28);background:#fff;color:#1d1b17;outline:none" />
+                        <div onClick="{{ cm.postReply }}" style="cursor:pointer;font:10px ui-monospace,monospace;padding:8px 11px;background:#1d1b17;color:#f6f4ee;display:flex;align-items:center">REPLY</div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ needName }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:16px;font:10px ui-monospace,monospace;letter-spacing:.04em;color:#9a958c">first time here — add your name to join the discourse (shown as “First L.”)</div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <input ref="{{ firstRef }}" placeholder="First name" style="flex:1;min-width:0;font:13px ui-sans-serif;padding:10px 12px;border:1px solid rgba(29,27,23,.3);background:#fff;color:#1d1b17;outline:none" />
+              <input ref="{{ lastRef }}" placeholder="Last name" style="flex:1;min-width:0;font:13px ui-sans-serif;padding:10px 12px;border:1px solid rgba(29,27,23,.3);background:#fff;color:#1d1b17;outline:none" />
+              <div onClick="{{ submitName }}" title="save name" style="cursor:pointer;font:13px ui-monospace,monospace;padding:10px 15px;background:#1d1b17;color:#f6f4ee;display:flex;align-items:center">→</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ hasName }}" hint-placeholder-val="{{ true }}">
+            <div style="margin-top:16px;font:10px ui-monospace,monospace;letter-spacing:.04em;color:#9a958c">{{ postingAs }}</div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <input ref="{{ expandInputRef }}" placeholder="add to the discourse…" style="flex:1;font:13px ui-sans-serif;padding:10px 12px;border:1px solid rgba(29,27,23,.3);background:#fff;color:#1d1b17;outline:none" />
+              <div onClick="{{ postComment }}" style="cursor:pointer;font:11px ui-monospace,monospace;letter-spacing:.1em;padding:10px 15px;background:#1d1b17;color:#f6f4ee;align-self:stretch;display:flex;align-items:center">POST</div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+
+<div ref="{{ nextArrowRef }}" onClick="{{ goNext }}" style="position:fixed;top:0;left:0;display:none;z-index:25;pointer-events:auto;cursor:pointer;width:38px;height:38px;align-items:center;justify-content:center;border:1px solid rgba(236,233,226,.6);border-radius:50%;background:rgba(8,8,14,.5);backdrop-filter:blur(4px)">
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#ece9e2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="8" x2="13" y2="8"></line><polyline points="8,3 13,8 8,13"></polyline></svg>
+</div>
+<div ref="{{ prevArrowRef }}" onClick="{{ goPrev }}" style="position:fixed;top:0;left:0;display:none;z-index:25;pointer-events:auto;cursor:pointer;width:38px;height:38px;align-items:center;justify-content:center;border:1px solid rgba(236,233,226,.6);border-radius:50%;background:rgba(8,8,14,.5);backdrop-filter:blur(4px)">
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#ece9e2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="8" x2="13" y2="8"></line><polyline points="8,3 13,8 8,13"></polyline></svg>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { focus: null, expanded: false, openThread: null, userName: (typeof localStorage !== 'undefined' && localStorage.getItem('m26_name')) || null };
+
+  wrapRef = React.createRef();
+  canvasRef = React.createRef();
+  phRef = React.createRef();
+  phCapRef = React.createRef();
+  landingRef = React.createRef();
+  previewRef = React.createRef();
+  previewAuthorRef = React.createRef();
+  previewTextRef = React.createRef();
+  expandInputRef = React.createRef();
+  replyInputRef = React.createRef();
+  firstRef = React.createRef();
+  lastRef = React.createRef();
+  nextArrowRef = React.createRef();
+  prevArrowRef = React.createRef();
+  titleRef = React.createRef();
+  subRef = React.createRef();
+  subInnerRef = React.createRef();
+  cohortRef = React.createRef();
+  replyFirstRef = React.createRef();
+  replyLastRef = React.createRef();
+  _uc = 0; entryT = 0; travel = null;
+
+  mx = 0; my = 0; mpx = null; mpy = null; _moved = false;
+  scroll = 0; targetScroll = 0;
+  rotX = 0.58; rotY = -0.65; tRotX = 0.58; tRotY = -0.65;
+  hoverId = null; hoverComment = null; previewIdx = null;
+  focus = null; expanded = false; focusBlend = 0; turn = 0; nextId = null; prevId = null; selectedStudent = null;
+  revStudent = null; hoverStart = null; revFrac = 0; revAlpha = 0; revLitSet = new Set();
+  focal = 820; center = { x: 0, y: 0, z: -1360 };
+  rc = { x: 0, y: 0, z: -1360 }; look = { x: 0, y: 0 }; camZcur = 1600;
+  ENTRY = 1400; ORTHO = 0.34;  DELAY = 380; DUR = 950; HOLD = 900;
+  _bph1 = Math.random()*6.283185; _bph2 = Math.random()*6.283185;
+  extra = {};
+
+  rnd(i){ const x = Math.sin(i * 12.9898) * 43758.5453; return x - Math.floor(x); }
+  hue(si, l){ return `hsl(${this.students[si].h}, 78%, ${l || 66}%)`; }
+
+  // Minimal CSV parser (quoted fields, embedded commas/newlines, doubled-quote escaping) — CSV is what
+  // Excel/Numbers/Sheets all read and write natively, and what GitHub renders as an editable table.
+  parseCSV(text){
+    const rows = []; let row = []; let field = ''; let inQuotes = false;
+    for (let i=0;i<text.length;i++){
+      const c = text[i];
+      if (inQuotes){
+        if (c === '"'){ if (text[i+1] === '"'){ field += '"'; i++; } else inQuotes = false; }
+        else field += c;
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === ','){ row.push(field); field=''; }
+        else if (c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+        else if (c === '\r'){ /* swallow, \n handles the break */ }
+        else field += c;
+      }
+    }
+    if (field.length || row.length){ row.push(field); rows.push(row); }
+    return rows.filter(r => !(r.length===1 && r[0].trim()===''));
+  }
+  // rows -> array of {header: value} objects, matched by header name (case/space-insensitive)
+  csvToObjects(rows){
+    if (!rows.length) return [];
+    const headers = rows[0].map(h => h.trim().toLowerCase());
+    return rows.slice(1).map(r => { const o = {}; headers.forEach((h,i) => o[h] = (r[i]||'').trim()); return o; });
+  }
+
+  static DEFAULT_ROSTER = ['Aarav','Diya','Kabir','Meera','Rohan','Saanvi','Vikram','Ananya','Ishaan','Tara','Neel','Priya','Arjun','Zoya','Dev'];
+
+  build(){
+    if (this.pts) return;
+    this._generate(this._roster || Component.DEFAULT_ROSTER);
+  }
+
+  // Full (re)generation of the whole point cloud for a given roster of names. Called once at mount with
+  // the default roster, and again — from scratch — whenever data/students.json hands us a changed one.
+  _generate(NAMES){
+    this.students = NAMES.map((name, i) => ({ name, h: Math.round((i * 360) / Math.max(1,NAMES.length)) }));
+    const KINDS = ['note','sketch','reference','question','project','reply','field note'];
+    const TYPES = ['text','image','video','audio'];
+    const SUB = [
+      'The proposal treats the weekly repair meet-up not as an event but as infrastructure: it returns, it accrues memory, and the people who show up begin to hold the conditions themselves rather than waiting for an organiser.',
+      'A shared ledger of who-knows-what across the neighbourhood — not an app first, but a ritual of naming and being named, so the knowledge compounds where it is made instead of leaking out to whoever documents it.',
+      'It begins from a tea stall that already convenes the street. The intervention only extends its hosting capacity — a few chairs, a slow board, a place to leave things — and lets the practice keep returning on its own terms.'
+    ];
+    const CMT = [
+      'Whose labour keeps this going once the funding stops?',
+      'This reads as infrastructure, not a one-off workshop — good.',
+      'Careful — is this noticing what exists, or importing it?',
+      'Who gets to return to this, and who is left out?',
+      'Feels closer to extraction than return right now.',
+      'The real condition here is trust, not the tool.',
+      'Could it compound if the original organiser stepped back?',
+      'The map shows relationships; I mostly see isolated nodes.',
+      'Strong, but it flattens the messy middle of the site.',
+      'What is the smallest version of this that still returns?'
+    ];
+
+    const WEEKS = 18;
+    const wc = [];
+    for (let w = 1; w <= WEEKS; w++) wc.push({ x: (this.rnd(w*7+3)-0.5)*460, y: (this.rnd(w*7+11)-0.5)*360 });
+    const base = new Date(2026, 6, 6);
+    const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const fdate = (w, off) => { const d = new Date(base.getTime() + ((w-1)*7+off)*86400000); return ('0'+d.getDate()).slice(-2)+' '+MON[d.getMonth()]; };
+
+    const pts = []; let c = 0;
+    for (let w = 1; w <= WEEKS; w++){
+      const count = 3 + Math.round(w*0.6);
+      const zBase = -(w-1)*160;
+      for (let k = 0; k < count; k++){
+        const s = c*3+5, student = c % 15;
+        pts.push({ id: c, student, week: w,
+          x: wc[w-1].x + (this.rnd(s)-0.5)*300,
+          y: wc[w-1].y + (this.rnd(s+1)-0.5)*300,
+          z: zBase + (this.rnd(s+2)-0.5)*110,
+          baseR: 3.4 + this.rnd(s+5)*2.2,
+          phase: this.rnd(s+6)*6.28, spd: 0.6 + this.rnd(s+7)*0.9,
+          kind: KINDS[c % KINDS.length],
+          subType: TYPES[Math.floor(this.rnd(s+8)*4)],
+          subText: SUB[c % SUB.length],
+          dateStr: fdate(w, Math.floor(this.rnd(s+9)*4)),
+          time: String(8+Math.floor(this.rnd(s+3)*10)).padStart(2,'0')+':'+String(Math.floor(this.rnd(s+4)*60)).padStart(2,'0'),
+          name: this.students[student].name,
+          vis:false, sx:0, sy:0, rad:0, relZ:1, depthA:0 });
+        c++;
+      }
+    }
+    this.pts = pts;
+    this.routes = this.students.map((_, si) => pts.filter(p => p.student===si).sort((a,b)=>a.week-b.week).map(p=>p.id));
+    this.routeIdx = {}; this.routes.forEach(r => r.forEach((id,i)=> this.routeIdx[id]=i));
+    this.semBase = base; this.WEEKS = WEEKS; this.wc = wc; this._MON = MON;
+
+    this.comments = []; let cid = 0;
+    for (const p of pts){
+      const nc = this.rnd(p.id*5+99);
+      const n = nc<0.55 ? 0 : nc<0.8 ? 1 : nc<0.93 ? 2 : 3;
+      for (let j = 0; j < n; j++){
+        const a1 = this.rnd(p.id*9+j*3+1)*6.28, a2 = (this.rnd(p.id*9+j*3+2)-0.5)*3.0;
+        const dist = 32 + this.rnd(p.id*9+j*3+3)*28;
+        const rc2 = this.rnd(cid*7+3); const nr = rc2<0.5?0:rc2<0.78?1:rc2<0.92?2:3;
+        const replies = [];
+        for (let q = 0; q < nr; q++) replies.push({ author: NAMES[Math.floor(this.rnd(cid*13+q*5+2)*15)], text: CMT[(cid+q*3+4)%CMT.length] });
+        this.comments.push({ id: cid, parent: p.id,
+          x: p.x + Math.cos(a1)*Math.cos(a2)*dist, y: p.y + Math.sin(a2)*dist, z: p.z + Math.sin(a1)*Math.cos(a2)*dist,
+          baseR: 1.5 + this.rnd(cid+7)*0.9, phase: this.rnd(cid+3)*6.28, spd: 0.6 + this.rnd(cid+5)*0.9,
+          author: NAMES[Math.floor(this.rnd(cid+13)*15)], text: CMT[cid % CMT.length], replies,
+          vis:false, sx:0, sy:0, crad:0 });
+        cid++;
+      }
+    }
+    this.extra = {};
+  }
+
+  // Roster pipeline: reads data/students.csv (one "Name" per row) at load. Add, remove, or rename a
+  // student there and — on next load — the whole cloud regenerates around the new roster (colours
+  // respace evenly across everyone, each student's thread rebuilt, real submissions re-merged in).
+  async loadRoster(){
+    let rows;
+    try {
+      const res = await fetch('data/students.csv', { cache: 'no-store' });
+      if (!res.ok) return;
+      rows = this.parseCSV(await res.text());
+    } catch (e) { return; }
+    const objs = this.csvToObjects(rows);
+    const names = objs.map(o => (o.name||'').trim()).filter(Boolean);
+    if (!names.length) return;
+    const current = this.students.map(s => s.name);
+    if (names.length === current.length && names.every((n,i)=>n===current[i])) return; // unchanged
+    this._roster = names;
+    this._generate(names);
+    this._subSeen = new Set();
+    this.focus = null; this.expanded = false; this.selectedStudent = null; this.hoverId = null; this.hoverComment = null; this.previewIdx = null;
+    this.setState({ focus: null, expanded: false });
+    await this.loadSubmissions();
+    this.forceUpdate();
+  }
+
+  clusterFor(w){ if (this.wc[w-1]) return this.wc[w-1]; return { x: (this.rnd(w*7+3)-0.5)*460, y: (this.rnd(w*7+11)-0.5)*360 }; }
+
+  // Publishing pipeline: reads data/submissions.csv at load. Add a row there (student name from the
+  // roster, a date, optional image path + text) and — on next load — it merges in as a real point,
+  // slotted into that student's thread at the right week, and briefly pulses so it reads as freshly arrived.
+  async loadSubmissions(){
+    let rows;
+    try {
+      const res = await fetch('data/submissions.csv', { cache: 'no-store' });
+      if (!res.ok) return;
+      rows = this.parseCSV(await res.text());
+    } catch (e) { return; }
+    const data = this.csvToObjects(rows).map(o => ({
+      id: o.id, student: o.student, date: o.date, time: o.time, kind: o.kind, type: o.type, image: o.image, text: o.text
+    }));
+    if (!data.length) return;
+    let addedAny = false;
+    for (const raw of data){
+      if (!raw || !raw.student || !raw.date) continue;
+      const key = raw.id || (raw.student+'|'+raw.date+'|'+(raw.time||''));
+      if (this._subSeen.has(key)) continue;
+      const si = this.students.findIndex(s => s.name.toLowerCase() === String(raw.student).trim().toLowerCase());
+      if (si < 0) continue;
+      const d = new Date(raw.date+'T'+(raw.time||'12:00')+':00');
+      if (isNaN(d.getTime())) continue;
+      const week = Math.max(1, Math.floor((d - this.semBase)/(7*86400000)) + 1);
+      const cl = this.clusterFor(week);
+      const id = this.pts.length, s = id*3+5;
+      this._subSeen.add(key);
+      this.pts.push({ id, student: si, week,
+        x: cl.x + (this.rnd(s)-0.5)*300, y: cl.y + (this.rnd(s+1)-0.5)*300, z: -(week-1)*160 + (this.rnd(s+2)-0.5)*110,
+        baseR: 4.4, phase: this.rnd(s+6)*6.28, spd: 0.6+this.rnd(s+7)*0.9,
+        kind: raw.kind || 'submission', subType: raw.type || (raw.image ? 'image' : 'text'),
+        subText: raw.text || '', image: raw.image || null,
+        dateStr: ('0'+d.getDate()).slice(-2)+' '+this._MON[d.getMonth()], time: raw.time || '12:00',
+        name: this.students[si].name, real: true, justArrived: performance.now(),
+        vis:false, sx:0, sy:0, rad:0, relZ:1, depthA:0 });
+      this.routes[si].push(id); this.routes[si].sort((a,b)=>this.pts[a].week-this.pts[b].week);
+      addedAny = true;
+    }
+    if (addedAny){
+      this.routeIdx = {}; this.routes.forEach(r => r.forEach((pid,i)=> this.routeIdx[pid]=i));
+      this.forceUpdate();
+    }
+  }
+
+  componentDidMount(){
+    this.build();
+    this._subSeen = new Set();
+    this.loadRoster();
+    this.loadSubmissions();
+    this._subPoll = setInterval(() => { this.loadRoster(); this.loadSubmissions(); }, 15000);
+    // cached soft sprite for cheap bokeh discs (drawImage ≫ per-point radial gradient)
+    const spr = document.createElement('canvas'); spr.width = spr.height = 64;
+    const sctx = spr.getContext('2d');
+    const sg = sctx.createRadialGradient(32,32,0,32,32,32);
+    sg.addColorStop(0,'rgba(255,255,255,1)'); sg.addColorStop(0.34,'rgba(255,255,255,1)'); sg.addColorStop(1,'rgba(255,255,255,0)');
+    sctx.fillStyle = sg; sctx.fillRect(0,0,64,64);
+    this._soft = spr;
+    const cv = this.canvasRef.current, wrap = this.wrapRef.current;
+    const ctx = cv.getContext('2d');
+    let W = 0, H = 0, dpr = 1;
+    const resize = () => { dpr = Math.min(window.devicePixelRatio||1,2); W = wrap.clientWidth; H = wrap.clientHeight; cv.width = W*dpr; cv.height = H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); };
+    resize(); this._resize = resize; window.addEventListener('resize', resize);
+
+    // fit the title's width to the sub-line width
+    const titleFit = () => {
+      const tl = this.titleRef.current, sb = this.subInnerRef.current; if (!tl || !sb) return;
+      tl.style.fontSize = '48px';
+      const sw = sb.getBoundingClientRect().width, tw = tl.getBoundingClientRect().width;
+      if (tw > 0 && sw > 0){ tl.style.fontSize = Math.max(13, 48 * sw / tw).toFixed(2) + 'px'; }
+    };
+    this._titleFit = titleFit; titleFit();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(titleFit);
+    setTimeout(titleFit, 350);
+    const _resize0 = this._resize; this._resize = () => { _resize0(); titleFit(); }; window.removeEventListener('resize', resize); window.addEventListener('resize', this._resize);
+
+    this._wheel = (e) => { e.preventDefault(); if (this.focus != null) return; this.targetScroll = Math.max(0, Math.min(this.ENTRY+this.HOLD+2600, this.targetScroll + e.deltaY*0.9)); };
+    wrap.addEventListener('wheel', this._wheel, { passive:false });
+    this._move = (e) => { const r = wrap.getBoundingClientRect(); this.mx = ((e.clientX-r.left)/r.width)*2-1; this.my = ((e.clientY-r.top)/r.height)*2-1; this.mpx = e.clientX-r.left; this.mpy = e.clientY-r.top; this._moved = true; };
+    wrap.addEventListener('mousemove', this._move);
+    this._click = () => {
+      // iso / white view: allow student-route selection only (no focus/turntable)
+      if (this.entryT < 0.82 && this.focus == null){
+        if (this.hoverId != null){
+          const st = this.pts[this.hoverId].student;
+          this.selectedStudent = (this.selectedStudent === st ? null : st);
+        } else { this.selectedStudent = null; }
+        return;
+      }
+      if (this.focus == null && this.hoverComment != null){
+        const cm = this.comments[this.hoverComment]; this.previewIdx = this.hoverComment;
+        this.previewAuthorRef.current.textContent = cm.author;
+        this.previewTextRef.current.textContent = '“' + cm.text + '”';
+        this.previewRef.current.style.display = 'block';
+        return;
+      }
+      if (this.focus == null && this.hoverId != null){
+        this.focus = this.hoverId; this.expanded = false; this.turn = 0; this.previewIdx = null; this.travel = null;
+        this.previewRef.current.style.display = 'none';
+        this.setState({ focus: this.focus, expanded: false });
+        return;
+      }
+      // background click → release
+      if (this.focus != null || this.previewIdx != null){
+        this.focus = null; this.expanded = false; this.previewIdx = null;
+        this.previewRef.current.style.display = 'none';
+        this.setState({ focus: null, expanded: false });
+      }
+    };
+    wrap.addEventListener('click', this._click);
+
+    // ---- touch / mobile ----
+    this._hitAt = (px,py) => {
+      if (this.focus != null) return;
+      let bf=null,bfd=1e9,bc=null,bcd=1e9;
+      for (const p of this.pts){ if(!p.vis) continue; const d=Math.hypot(p.sx-px,p.sy-py); if(d<Math.max(22,p.rad+16)&&d<bfd){bfd=d;bf=p;} }
+      for (let ci=0;ci<this.comments.length;ci++){ const cm=this.comments[ci]; if(!cm.vis) continue; const d=Math.hypot(cm.sx-px,cm.sy-py); if(d<Math.max(15,cm.crad+12)&&d<bcd){bcd=d;bc=ci;} }
+      if (bc!=null && (bf==null||bcd<bfd)){ this.hoverComment=bc; if(this.hoverId!=null){ this.hoverId=null; this.phRef.current.style.display='none'; } }
+      else { this.hoverComment=null; this.hoverId = bf?bf.id:null;
+        if (bf){ const cap=this.phCapRef.current; this.revStudent=bf.student; this.hoverStart=performance.now(); this.revFrac=0; cap.innerHTML='<b style="color:'+this.hue(bf.student,60)+'">'+bf.name+'</b> · '+bf.kind+' · '+bf.dateStr; }
+      }
+    };
+    let tStartX=0,tStartY=0,tLastY=0,tMoved=false,tStartT=0;
+    this._tStart = (e) => { if (e.touches.length!==1) return; const r=wrap.getBoundingClientRect(),tc=e.touches[0]; tStartX=tc.clientX-r.left; tStartY=tc.clientY-r.top; tLastY=tc.clientY; tMoved=false; tStartT=performance.now(); };
+    this._tMove = (e) => {
+      if (e.touches.length!==1) return; const r=wrap.getBoundingClientRect(),tc=e.touches[0];
+      const x=tc.clientX-r.left, y=tc.clientY-r.top;
+      if (Math.abs(x-tStartX)+Math.abs(y-tStartY) > 8) tMoved=true;
+      this.mx=(x/r.width)*2-1; this.my=(y/r.height)*2-1; this.mpx=x; this.mpy=y; this._moved=true;
+      if (this.focus == null){ e.preventDefault(); const dy=tLastY-tc.clientY; this.targetScroll=Math.max(0, Math.min(this.ENTRY+this.HOLD+2600, this.targetScroll + dy*2.2)); }
+      tLastY=tc.clientY;
+    };
+    this._tEnd = (e) => { const dt=performance.now()-tStartT; if (!tMoved && dt<500){ e.preventDefault(); this.mpx=tStartX; this.mpy=tStartY; this._hitAt(tStartX,tStartY); this._click(); } };
+    wrap.addEventListener('touchstart', this._tStart, { passive:true });
+    wrap.addEventListener('touchmove', this._tMove, { passive:false });
+    wrap.addEventListener('touchend', this._tEnd, { passive:false });
+
+    const lerp = (a,b,t) => a+(b-a)*t;
+    const lerp3 = (A,B,t) => [Math.round(lerp(A[0],B[0],t)), Math.round(lerp(A[1],B[1],t)), Math.round(lerp(A[2],B[2],t))];
+    const ease = x => x*x*(3-2*x);
+    const easeM = x => { const k = 3.6; return (Math.tanh((x-0.5)*k)/Math.tanh(0.5*k))*0.5 + 0.5; }; // ease-in-out, fast middle
+
+    const loop = () => {
+      const t = performance.now();
+      this.scroll += (this.targetScroll - this.scroll)*0.09;
+      const entryT = ease(Math.min(1, this.scroll/this.ENTRY));
+      this.entryT = entryT;
+      const dollyExtra = Math.max(0, this.scroll - this.ENTRY - this.HOLD);
+      const past = Math.max(0, this.scroll - this.ENTRY);
+      const allLit = Math.min(1, past/this.HOLD) * (1 - Math.min(1, dollyExtra/900));
+      const mRY = this.mx*0.13 + Math.sin(t*7e-5)*0.05, mRX = -this.my*0.10 + Math.cos(t*6e-5)*0.035;
+
+      let rcT, lookT, camZT, rotYT, rotXT, traveling = false;
+      if (this.focus != null){
+        const fp = this.pts[this.focus];
+        this.turn += 0.0045; this.focusBlend += (1 - this.focusBlend)*0.05;
+        let pos = fp;
+        if (this.travel){
+          const raw = Math.min(1, (t - this.travel.start)/this.travel.dur);
+          this.travel.tp = easeM(raw); traveling = true;
+          const a = this.pts[this.travel.from], b = this.pts[this.travel.to], tp = this.travel.tp;
+          pos = { x: lerp(a.x,b.x,tp), y: lerp(a.y,b.y,tp), z: lerp(a.z,b.z,tp) };
+          if (raw >= 1) this.travel = null;
+        }
+        rcT = pos; lookT = { x: pos.x - 70, y: pos.y - 20 }; camZT = pos.z + 300;
+        rotYT = this.turn; rotXT = 0.16 + Math.sin(this.turn*0.6)*0.06;
+      } else {
+        this.focusBlend += (0 - this.focusBlend)*0.06;
+        rcT = this.center; lookT = { x:0, y:0 }; camZT = lerp(1600,700,entryT) - dollyExtra;
+        rotYT = lerp(-0.65, mRY, entryT); rotXT = lerp(0.58, mRX, entryT);
+      }
+      const sm = traveling ? 1 : 0.05, smZ = traveling ? 1 : 0.06;
+      this.rc.x += (rcT.x-this.rc.x)*sm; this.rc.y += (rcT.y-this.rc.y)*sm; this.rc.z += (rcT.z-this.rc.z)*sm;
+      this.look.x += (lookT.x-this.look.x)*sm; this.look.y += (lookT.y-this.look.y)*sm;
+      this.camZcur += (camZT-this.camZcur)*smZ;
+      this.tRotY = rotYT; this.tRotX = rotXT; this.rotY += (this.tRotY-this.rotY)*0.06; this.rotX += (this.tRotX-this.rotX)*0.06;
+
+      const cosY = Math.cos(this.rotY), sinY = Math.sin(this.rotY), cosX = Math.cos(this.rotX), sinX = Math.sin(this.rotX);
+      const cx = W/2, cy = H/2, RC = this.rc, LK = this.look, camZ = this.camZcur, persp = entryT;
+      // living-cloud breath: the iso structure slowly, subtly expands/contracts around its own center,
+      // as if breathing — two slow off-beat waves so it never feels mechanical; fades out once the dive begins.
+      const breatheFade = Math.max(0, 1 - persp/0.45);
+      const bt = t*0.001;
+      const globalBreathe = 1 + breatheFade*0.017*(Math.sin(bt*(6.283185/10.5)+this._bph1) + 0.55*Math.sin(bt*(6.283185/16.2)+this._bph2))/1.55;
+      const proj = (mx,my,mz) => { let dx=mx-RC.x,dy=my-RC.y,dz=mz-RC.z; let x1=dx*cosY+dz*sinY,z1=-dx*sinY+dz*cosY; let y1=dy*cosX-z1*sinX; z1=dy*sinX+z1*cosX; const wx=RC.x+x1,wy=RC.y+y1,wz=RC.z+z1; const relZ=camZ-wz; const perspS=this.focal/Math.max(40,relZ); const eff=(this.ORTHO+(perspS-this.ORTHO)*persp)*globalBreathe; return { sx:cx+(wx-LK.x)*eff, sy:cy+(wy-LK.y)*eff, relZ, eff, camx:wx-LK.x, camy:wy-LK.y, skip: persp>0.45 && relZ<8 }; };
+      const NEAR = 34; // near plane for line clipping
+      const effOf = d => (this.ORTHO + (this.focal/Math.max(40,d) - this.ORTHO)*persp)*globalBreathe;
+      // bokeh blur: near points (small depth) and far points soften; a band stays sharp
+      const bokehAmt = Math.max(0, Math.min(1, (persp-0.72)/0.28)); // 0 in iso/transition, ramps in deep
+      const blurOf = d => { if (bokehAmt<=0) return 0; const fD = this.focus!=null ? Math.max(120, this.pts[this.focus].relZ) : 540; return (d < fD ? Math.min(7, (1 - d/fD)*7.5) : Math.min(5, (d-fD)/520)) * bokehAmt; };
+      // draw a line segment, clipped to the near plane so it never pops at the camera
+      const seg = (a, b) => {
+        let ax=a.ccx, ay=a.ccy, ad=a.cdepth, bx=b.ccx, by=b.ccy, bd=b.cdepth;
+        if (ad < NEAR && bd < NEAR) return;
+        if (ad < NEAR){ const tt=(NEAR-ad)/(bd-ad); ax+= (bx-ax)*tt; ay+= (by-ay)*tt; ad=NEAR; }
+        else if (bd < NEAR){ const tt=(NEAR-bd)/(ad-bd); bx+= (ax-bx)*tt; by+= (ay-by)*tt; bd=NEAR; }
+        const ea=effOf(ad), eb=effOf(bd);
+        ctx.moveTo(cx+ax*ea, cy+ay*ea); ctx.lineTo(cx+bx*eb, cy+by*eb);
+      };
+      // bokeh-aware filled disc (soft feathered sprite when out of focus band; dimmer so far points merge into bg)
+      const soft = this._soft;
+      const disc = (x, y, r, blur, alpha, col) => {
+        const k = blur <= 0 ? 0 : Math.min(1, blur/1.6); // crossfade crisp<->soft, no hard cut
+        if (k < 1){ ctx.globalAlpha=alpha*(1-k); ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill(); }
+        if (k > 0){ const R=r+blur; ctx.globalAlpha=Math.min(1,alpha*0.62)*k; ctx.drawImage(soft, x-R, y-R, R*2, R*2); }
+      };
+      // per-segment gates so lines never hard-cut at the near clip plane or pop in/out of the far bokeh --
+      // they ease to transparent well before either happens.
+      const nearGate = d => persp>0.03 ? Math.max(0, Math.min(1, (d-NEAR)/85)) : 1;
+      const bokehGate = d => { if (bokehAmt<=0) return 1; const b=blurOf(d); return Math.max(0, 1 - Math.min(1, b/6.4)); };
+      // ambient web lines: fully gated (near clip + bokeh blur), so only the in-focus band reads at normal strength
+      const segA = (a, b, baseAlpha) => {
+        if (a.cdepth<NEAR && b.cdepth<NEAR) return;
+        const fa = nearGate(a.cdepth)*bokehGate(a.cdepth), fb = nearGate(b.cdepth)*bokehGate(b.cdepth);
+        const alpha = baseAlpha*Math.min(fa,fb);
+        if (alpha<=0.003) return;
+        ctx.globalAlpha=alpha; ctx.beginPath(); seg(a,b); ctx.stroke();
+      };
+      // highlighted route lines (selected / reveal): stay vivid, only eased near the camera clip so they never pop
+      const segN = (a, b, baseAlpha) => {
+        if (a.cdepth<NEAR && b.cdepth<NEAR) return;
+        const alpha = baseAlpha*Math.min(nearGate(a.cdepth), nearGate(b.cdepth));
+        if (alpha<=0.003) return;
+        ctx.globalAlpha=alpha; ctx.beginPath(); seg(a,b); ctx.stroke();
+      };
+
+      const order = [];
+      for (const p of this.pts){
+        const pr = proj(p.x,p.y,p.z);
+        // always update sx/sy + camera-space coords so segments never draw stale
+        p.sx=pr.sx; p.sy=pr.sy; p.relZ=pr.relZ; p.ccx=pr.camx; p.ccy=pr.camy; p.cdepth=pr.relZ;
+        p.blur = persp>0.05 ? blurOf(pr.relZ) : 0;
+        if (pr.skip){ p.vis=false; continue; }
+        const breath=1+0.3*Math.sin(t*0.0018*p.spd+p.phase);
+        p.rad=Math.max(0.7,p.baseR*pr.eff*breath);
+        // iso: full alpha → solid black via difference. 3D: depth-fade so far dots merge into the dark bg.
+        const nearFade = Math.max(0, Math.min(1, (pr.relZ-NEAR)/120));
+        const depthBright = Math.max(0.12, Math.min(1, 1-(pr.relZ-300)/2400));
+        p.depthA = lerp(1.0, depthBright, entryT) * (persp>0.05 ? nearFade : 1);
+        p.vis=(p.sx>-160&&p.sx<W+160&&p.sy>-160&&p.sy<H+160);
+        if (p.vis) order.push(p);
+      }
+      for (const cm of this.comments){
+        const pr = proj(cm.x,cm.y,cm.z);
+        cm.sx=pr.sx; cm.sy=pr.sy; cm.relZ=pr.relZ; cm.ccx=pr.camx; cm.ccy=pr.camy; cm.cdepth=pr.relZ;
+        cm.blur = persp>0.05 ? blurOf(pr.relZ) : 0;
+        if (pr.skip){ cm.vis=false; continue; }
+        const breath=1+0.3*Math.sin(t*0.0018*cm.spd+cm.phase);
+        cm.crad=Math.max(0.5,cm.baseR*pr.eff*breath);
+        const nearFadeC = Math.max(0, Math.min(1, (pr.relZ-NEAR)/120));
+        const depthBrightC = Math.max(0.10, Math.min(1, 1-(pr.relZ-300)/2400));
+        cm.depthA = lerp(0.9, depthBrightC, entryT) * (persp>0.05 ? nearFadeC : 1);
+        cm.vis=(cm.sx>-120&&cm.sx<W+120&&cm.sy>-120&&cm.sy<H+120);
+      }
+      order.sort((a,b)=>b.relZ-a.relZ);
+
+      // hover (only when not focused)
+      if (this._moved && this.mpx != null && this.focus == null){
+        this._moved = false;
+        let bf=null,bfd=1e9,bc=null,bcd=1e9;
+        for (const p of order){ const d=Math.hypot(p.sx-this.mpx,p.sy-this.mpy); if (d<Math.max(16,p.rad+11)&&d<bfd){ bfd=d; bf=p; } }
+        for (let ci=0; ci<this.comments.length; ci++){ const cm=this.comments[ci]; if(!cm.vis) continue; const d=Math.hypot(cm.sx-this.mpx,cm.sy-this.mpy); if (d<Math.max(11,cm.crad+8)&&d<bcd){ bcd=d; bc=ci; } }
+        if (bc != null && (bf == null || bcd < bfd)){
+          this.hoverComment = bc; if (this.hoverId != null){ this.hoverId = null; this.phRef.current.style.display='none'; }
+        } else {
+          this.hoverComment = null; const nh = bf ? bf.id : null;
+          if (nh !== this.hoverId){
+            this.hoverId = nh;
+            const ph = this.phRef.current, cap = this.phCapRef.current;
+            if (nh != null){ const p=this.pts[nh]; this.revStudent=p.student; this.hoverStart=t; this.revFrac=0; cap.innerHTML='<b style="color:'+this.hue(p.student,60)+'">'+p.name+'</b> · '+p.kind+' · '+p.dateStr; ph.style.display='block'; }
+            else ph.style.display='none';
+          }
+        }
+      }
+      if (this.focus != null && this.phRef.current) this.phRef.current.style.display = 'none';
+
+      // hover route reveal (state 3)
+      const hovering = this.hoverId != null && this.focus == null;
+      if (hovering){ const el=t-this.hoverStart; this.revFrac=ease(Math.min(1,Math.max(0,(el-this.DELAY)/this.DUR))); this.revAlpha+=(1-this.revAlpha)*0.12; }
+      else { this.revAlpha += (0-this.revAlpha)*0.10; if (this.revAlpha<0.02) this.revFrac=0; }
+
+      const lr = this.landingRef.current; if (lr) lr.style.opacity = Math.max(0, 1 - entryT*1.8);
+      if (this.cohortRef.current) this.cohortRef.current.style.opacity = (this.focus==null ? allLit : 0).toFixed(3);
+      if (wrap) wrap.style.cursor = (this.focus==null && (this.hoverId!=null||this.hoverComment!=null)) ? 'pointer' : 'default';
+
+      // ===== draw =====
+      const bg = lerp3([243,241,234],[6,6,12], entryT);
+      const lc = lerp3([92,88,80],[150,155,185], entryT);
+      const hueL = lerp(46,66,entryT);
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgb('+bg.join(',')+')'; ctx.fillRect(0,0,W,H);
+
+      if (entryT > 0.02){ const vg = ctx.createRadialGradient(cx,cy*0.9,0,cx,cy,Math.max(W,H)*0.72); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,'+(0.5*entryT).toFixed(3)+')'); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H); }
+
+      // ink: dark on the cream page → light in the dark space. Plain source-over avoids
+      // the difference-blend flips that were turning dots white / haloing them.
+      const ink = lerp3([20,18,15],[232,233,244], entryT);
+      const inkStr = 'rgb('+ink.join(',')+')';
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = inkStr; ctx.lineCap = 'round'; ctx.lineWidth=1;
+      const routeBaseA = lerp(0.42,0.24,entryT);
+      for (const r of this.routes){ for (let i=0;i<r.length-1;i++) segA(this.pts[r[i]], this.pts[r[i+1]], routeBaseA); }
+      const commentBaseA = lerp(0.3,0.16,entryT);
+      for (const cm of this.comments){ segA(this.pts[cm.parent], cm, commentBaseA); }
+      for (const p of order){ disc(p.sx, p.sy, p.rad, p.blur, p.depthA, inkStr); }
+      for (const cm of this.comments){ if(cm.cdepth<=NEAR) continue; disc(cm.sx, cm.sy, cm.crad, cm.blur, cm.depthA, inkStr); }
+      ctx.globalAlpha = 1;
+
+      // freshly-published real submissions: a brief expanding pulse so a new entry visibly "arrives"
+      for (const p of order){
+        if (!p.real || !p.justArrived) continue;
+        const age = t - p.justArrived; if (age > 6000) continue;
+        const k = 1 - age/6000;
+        ctx.globalAlpha = k*0.85; ctx.strokeStyle = inkStr; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.arc(p.sx, p.sy, p.rad*1.6 + (1-k)*26, 0, 6.2832); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      // cohort dwell highlight — mark only each student's STARTING point so we read them as the students
+      if (allLit > 0.02 && this.focus == null){
+        for (let si=0; si<this.routes.length; si++){
+          const p = this.pts[this.routes[si][0]]; if (!p || !p.vis) continue;
+          const col = this.hue(si, hueL);
+          ctx.globalAlpha=allLit; ctx.fillStyle=col; ctx.shadowBlur=11; ctx.shadowColor=this.hue(si,60);
+          ctx.beginPath(); ctx.arc(p.sx,p.sy,Math.max(3,p.rad*1.7),0,6.2832); ctx.fill();
+          ctx.shadowBlur=0; ctx.globalAlpha=allLit*0.55; ctx.strokeStyle=col; ctx.lineWidth=1.2;
+          ctx.beginPath(); ctx.arc(p.sx,p.sy,Math.max(7,p.rad*2.8),0,6.2832); ctx.stroke();
+        }
+        ctx.shadowBlur=0; ctx.globalAlpha=1;
+      }
+
+      // persistent selected-student route (locked in iso, stays lit through 3D)
+      if (this.selectedStudent != null && this.focus == null){
+        const r = this.routes[this.selectedStudent];
+        const col = this.hue(this.selectedStudent, hueL);
+        ctx.strokeStyle = col; ctx.lineWidth = 1.7; ctx.lineCap = 'round'; ctx.shadowBlur = lerp(2,7,entryT); ctx.shadowColor = this.hue(this.selectedStudent,60);
+        for (let i=0;i<r.length-1;i++) segN(this.pts[r[i]], this.pts[r[i+1]], 0.75); ctx.shadowBlur=0;
+        for (let i=0;i<r.length;i++){ const pp=this.pts[r[i]]; if(!pp.vis) continue; ctx.globalAlpha=0.9; ctx.fillStyle=col; ctx.shadowBlur=lerp(3,8,entryT); ctx.shadowColor=this.hue(this.selectedStudent,60); ctx.beginPath(); ctx.arc(pp.sx,pp.sy,pp.rad*1.35,0,6.2832); ctx.fill(); ctx.shadowBlur=0; }
+        ctx.globalAlpha=1;
+      }
+
+      // hover reveal route (hue, on top)
+      this.revLitSet = new Set();
+      if (this.revAlpha > 0.02 && this.revStudent != null && this.focus == null){
+        const r = this.routes[this.revStudent], cps = r.map(id=>this.pts[id]);
+        const segLen=[]; let total=0; for (let i=0;i<cps.length-1;i++){ const L=Math.hypot(cps[i+1].sx-cps[i].sx,cps[i+1].sy-cps[i].sy); segLen.push(L); total+=L; }
+        const budget=this.revFrac*total;
+        ctx.strokeStyle=this.hue(this.revStudent,hueL); ctx.lineWidth=1.8; ctx.lineCap='round'; ctx.shadowBlur=lerp(2,8,entryT); ctx.shadowColor=this.hue(this.revStudent,64);
+        let acc=0;
+        for (let i=0;i<segLen.length;i++){ if(acc+segLen[i]<=budget){ segN(cps[i], cps[i+1], this.revAlpha*0.85); this.revLitSet.add(r[i+1]); acc+=segLen[i]; } else { const f=segLen[i]>0?(budget-acc)/segLen[i]:0; const stub={ccx:cps[i].ccx+(cps[i+1].ccx-cps[i].ccx)*f, ccy:cps[i].ccy+(cps[i+1].ccy-cps[i].ccy)*f, cdepth:cps[i].cdepth+(cps[i+1].cdepth-cps[i].cdepth)*f}; segN(cps[i], stub, this.revAlpha*0.85); break; } }
+        this.revLitSet.add(r[0]); ctx.shadowBlur=0; ctx.globalAlpha=1;
+        for (const p of order){ if(!this.revLitSet.has(p.id)) continue; ctx.globalAlpha=1; ctx.fillStyle=this.hue(p.student,hueL); ctx.shadowBlur=lerp(3,7,entryT); ctx.shadowColor=this.hue(p.student,64); ctx.beginPath(); ctx.arc(p.sx,p.sy,p.rad*1.35,0,6.2832); ctx.fill(); ctx.shadowBlur=0; }
+      }
+
+      // focus: dim the field, highlight the route line, spotlight the dot (+ light streak on travel)
+      if (this.focusBlend > 0.02){
+        ctx.globalAlpha = this.focusBlend*0.6; ctx.fillStyle = 'rgb('+bg.join(',')+')'; ctx.fillRect(0,0,W,H); ctx.globalAlpha = 1;
+        if (this.focus != null){
+          const fp = this.pts[this.focus]; const col = this.hue(fp.student,66); const route = this.routes[fp.student];
+          // highlighted route line — skip non-visible nodes so stale sx/sy can't spike the path
+          ctx.lineCap = 'round'; ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.45*this.focusBlend; ctx.shadowBlur = 6; ctx.shadowColor = this.hue(fp.student,60);
+          ctx.beginPath(); for (let i=0;i<route.length-1;i++) seg(this.pts[route[i]], this.pts[route[i+1]]); ctx.stroke(); ctx.shadowBlur = 0;
+          // faint nodes along the route (visible only)
+          ctx.globalAlpha = 0.7*this.focusBlend; ctx.fillStyle = col;
+          for (let i=0;i<route.length;i++){ const pp=this.pts[route[i]]; if(!pp.vis||route[i]===this.focus) continue; ctx.beginPath(); ctx.arc(pp.sx,pp.sy,Math.max(1.4,pp.rad*0.8),0,6.2832); ctx.fill(); }
+          ctx.globalAlpha = 1;
+          // spotlight the focused dot
+          ctx.strokeStyle = col; ctx.globalAlpha = 0.5*this.focusBlend; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.arc(fp.sx, fp.sy, fp.rad*2.6 + 6*Math.sin(t*0.002), 0, 6.2832); ctx.stroke();
+          ctx.globalAlpha = this.focusBlend; ctx.fillStyle = col; ctx.shadowBlur = 22; ctx.shadowColor = col;
+          ctx.beginPath(); ctx.arc(fp.sx, fp.sy, fp.rad*1.25, 0, 6.2832); ctx.fill(); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+        }
+      }
+
+      // travel arrows along the focused student's route (hidden while the box is open)
+      if (this.focus != null && this.focusBlend > 0.5 && !this.expanded){
+        const fp = this.pts[this.focus]; const route = this.routes[fp.student]; const idx = this.routeIdx[this.focus];
+        this.nextId = idx < route.length - 1 ? route[idx+1] : null;
+        this.prevId = idx > 0 ? route[idx-1] : null;
+        const place = (el, id) => { if (!el) return; if (id == null){ el.style.display='none'; return; } const tp=this.pts[id]; const ang=Math.atan2(tp.sy-fp.sy, tp.sx-fp.sx); const px=fp.sx+Math.cos(ang)*72, py=fp.sy+Math.sin(ang)*72; el.style.transform='translate('+px+'px,'+py+'px) translate(-50%,-50%) rotate('+ang+'rad)'; el.style.opacity=Math.min(1,(this.focusBlend-0.5)*2.2); el.style.display='flex'; };
+        place(this.nextArrowRef.current, this.nextId);
+        place(this.prevArrowRef.current, this.prevId);
+      } else { this.nextId=null; this.prevId=null; if(this.nextArrowRef.current) this.nextArrowRef.current.style.display='none'; if(this.prevArrowRef.current) this.prevArrowRef.current.style.display='none'; }
+
+      // comment preview bubble follows its dot
+      if (this.previewIdx != null){ const cm=this.comments[this.previewIdx]; if (cm.vis && this.focus==null){ this.previewRef.current.style.transform='translate('+cm.sx+'px,'+cm.sy+'px) translate(-50%,-118%)'; this.previewRef.current.style.display='block'; } else this.previewRef.current.style.display='none'; }
+      // hover placeholder follows fragment
+      if (this.hoverId != null && this.focus == null){ const p=this.pts[this.hoverId]; if(p.vis){ this.phRef.current.style.transform='translate('+p.sx+'px,'+p.sy+'px) translate(-50%,-128%)'; this.phRef.current.style.display='block'; } else this.phRef.current.style.display='none'; }
+
+      this._raf = requestAnimationFrame(loop);
+    };
+    this._raf = requestAnimationFrame(loop);
+  }
+
+  componentWillUnmount(){ cancelAnimationFrame(this._raf); clearInterval(this._subPoll); const wrap=this.wrapRef.current; if(wrap){ wrap.removeEventListener('wheel',this._wheel); wrap.removeEventListener('mousemove',this._move); wrap.removeEventListener('click',this._click); wrap.removeEventListener('touchstart',this._tStart); wrap.removeEventListener('touchmove',this._tMove); wrap.removeEventListener('touchend',this._tEnd); } window.removeEventListener('resize',this._resize); }
+
+  expand = () => { this.expanded = true; this.setState({ expanded: true }); };
+  closeExpand = () => { this.expanded = false; this.setState({ expanded: false }); };
+  exitFocus = () => {
+    // come to rest via the SHORT path — don't unwind every turntable rotation
+    this.rotY = Math.atan2(Math.sin(this.rotY), Math.cos(this.rotY));
+    this.turn = this.rotY; this.travel = null;
+    this.focus = null; this.expanded = false; this.previewIdx = null;
+    if (this.previewRef.current) this.previewRef.current.style.display='none';
+    this.setState({ focus: null, expanded: false, openThread: null });
+  };
+  startTravel = (toId) => { if (toId == null || toId === this.focus) return; this.travel = { from: this.focus, to: toId, start: performance.now(), dur: 880, tp: 0 }; this.focus = toId; this.setState({ focus: toId, openThread: null }); };
+  goNext = () => this.startTravel(this.nextId);
+  goPrev = () => this.startTravel(this.prevId);
+  findComment(id){ for (const c of this.comments) if (c.id === id) return c; for (const k in this.extra){ for (const c of this.extra[k]) if (c.id === id) return c; } return null; }
+  commitName(fn, ln){ fn=(fn||'').trim(); ln=(ln||'').trim(); if(!fn) return; const cap = s => s.charAt(0).toUpperCase()+s.slice(1); const name = cap(fn) + (ln ? ' '+ln[0].toUpperCase()+'.' : ''); try { localStorage.setItem('m26_name', name); } catch(e){} this.setState({ userName: name }); }
+  submitName = () => { this.commitName(this.firstRef.current && this.firstRef.current.value, this.lastRef.current && this.lastRef.current.value); };
+  submitReplyName = () => { this.commitName(this.replyFirstRef.current && this.replyFirstRef.current.value, this.replyLastRef.current && this.replyLastRef.current.value); };
+  postComment = () => { if (!this.state.userName) return; const el=this.expandInputRef.current; if(!el) return; const v=el.value.trim(); if(!v) return; const f=this.state.focus; if(f==null) return; (this.extra[f]=this.extra[f]||[]).unshift({ id:'u'+(++this._uc), author:this.state.userName, text:v, replies:[] }); el.value=''; this.forceUpdate(); };
+  postReply = (id) => { if (!this.state.userName) return; const el=this.replyInputRef.current; if(!el) return; const v=el.value.trim(); if(!v) return; const c=this.findComment(id); if(!c) return; c.replies.push({ author:this.state.userName, text:v }); el.value=''; this.forceUpdate(); };
+
+  renderVals(){
+    this.build();
+    const f = this.state.focus;
+    const uName = this.state.userName;
+    let v = { wrapRef:this.wrapRef, canvasRef:this.canvasRef, phRef:this.phRef, phCapRef:this.phCapRef, landingRef:this.landingRef, previewRef:this.previewRef, previewAuthorRef:this.previewAuthorRef, previewTextRef:this.previewTextRef, expandInputRef:this.expandInputRef, replyInputRef:this.replyInputRef, firstRef:this.firstRef, lastRef:this.lastRef, replyFirstRef:this.replyFirstRef, replyLastRef:this.replyLastRef, nextArrowRef:this.nextArrowRef, prevArrowRef:this.prevArrowRef, titleRef:this.titleRef, subRef:this.subRef, subInnerRef:this.subInnerRef, cohortRef:this.cohortRef, expand:this.expand, closeExpand:this.closeExpand, exitFocus:this.exitFocus, postComment:this.postComment, postReply:this.postReply, goNext:this.goNext, goPrev:this.goPrev, submitName:this.submitName, submitReplyName:this.submitReplyName, showCard: f!=null && !this.state.expanded, expanded: this.state.expanded, hasName: !!uName, needName: !uName, userName: uName, postingAs: uName ? ('posting as ' + uName) : '' };
+    if (f != null){
+      const p = this.pts[f];
+      const list = (this.extra[f]||[]).concat(this.comments.filter(c => c.parent===f));
+      const ot = this.state.openThread;
+      const mapC = c => ({ id:c.id, author:c.author, text:c.text, replies:c.replies||[], count:(c.replies||[]).length, open: ot===c.id,
+        ringColor: ot===c.id ? '#1d1b17' : 'rgba(29,27,23,.4)', ringText: ot===c.id ? '#f6f4ee' : '#6c685f', ringBg: ot===c.id ? '#1d1b17' : 'transparent',
+        toggle: () => this.setState(s => ({ openThread: s.openThread===c.id ? null : c.id })),
+        postReply: () => this.postReply(c.id) });
+      v.focusName = p.name; v.focusKind = p.kind; v.focusDate = p.dateStr; v.focusType = p.subType; v.focusText = p.subText;
+      v.isMedia = p.subType !== 'text'; v.focusTypeLabel = p.subType.toUpperCase() + ' — DROP SUBMISSION';
+      v.focusImage = p.image || null; v.hasRealImage = v.isMedia && !!p.image; v.isPlaceholderMedia = v.isMedia && !p.image;
+      v.focusComments = list.length ? list.map(mapC) : [{ id:'_', author:'—', text:'No discourse yet — start it below.', replies:[], count:0, open:false, ringColor:'transparent', ringText:'transparent', ringBg:'transparent', toggle:()=>{}, postReply:()=>{} }];
+      v.focusCommentCount = list.length;
+    } else {
+      v.focusName=''; v.focusKind=''; v.focusDate=''; v.focusType=''; v.focusText=''; v.isMedia=false; v.focusTypeLabel=''; v.focusComments=[]; v.focusCommentCount=0;
+      v.focusImage=null; v.hasRealImage=false; v.isPlaceholderMedia=false;
+    }
+    return v;
+  }
+}
+</script>
+</body>
+</html>
