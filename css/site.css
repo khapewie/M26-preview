@@ -174,7 +174,6 @@
 .m26-index-name { min-width: 0; }
 
 @media (min-width: 960px) {
-  .m26-arch-body-cols { display: block; } /* (reserved) */
   .m26-arch { display: grid; grid-template-columns: 220px minmax(0, 1fr); column-gap: clamp(32px, 6vw, 96px); }
   .m26-arch-head, .m26-arch-foot { grid-column: 1 / -1; }
   .m26-index { grid-column: 1; align-self: start; position: sticky; top: 32px; }
